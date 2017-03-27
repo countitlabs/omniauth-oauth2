@@ -60,6 +60,11 @@ module OmniAuth
           @env["rack.session"] ||= {}
         end
         session["omniauth.state"] = params[:state]
+        state = options.authorize_params[:state]
+        state_vars = @env['rack.request.query_hash']
+        state_vars['http_host'] = @env['HTTP_HOST']
+        key = "oauth:#{state}"
+        LeRedis.redis.set key, state_vars
         params
       end
 
@@ -68,6 +73,10 @@ module OmniAuth
       end
 
       def callback_phase # rubocop:disable AbcSize, CyclomaticComplexity, MethodLength, PerceivedComplexity
+        key = "oauth:#{request.params['state']}"
+        state_vars = LeRedis.redis.get key
+        LeRedis.redis.del key
+        request.env["state_vars"] = state_vars
         error = request.params["error_reason"] || request.params["error"]
         if error
           fail!(error, CallbackError.new(request.params["error"], request.params["error_description"] || request.params["error_reason"], request.params["error_uri"]))
