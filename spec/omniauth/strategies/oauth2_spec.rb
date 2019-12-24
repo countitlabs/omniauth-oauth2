@@ -1,6 +1,6 @@
 require "helper"
 
-describe OmniAuth::Strategies::OAuth2 do
+describe OmniAuth::Strategies::OAuth2 do # rubocop:disable Metrics/BlockLength
   def app
     lambda do |_env|
       [200, {}, ["Hello."]]
@@ -49,15 +49,22 @@ describe OmniAuth::Strategies::OAuth2 do
     end
 
     it "includes top-level options that are marked as :authorize_options" do
-      instance = subject.new("abc", "def", :authorize_options => [:scope, :foo, :state], :scope => "bar", :foo => "baz")
+      instance = subject.new("abc", "def", :authorize_options => %i[scope foo state], :scope => "bar", :foo => "baz")
       expect(instance.authorize_params["scope"]).to eq("bar")
       expect(instance.authorize_params["foo"]).to eq("baz")
+      expect(instance.authorize_params["state"]).not_to be_empty
     end
 
     it "includes random state in the authorize params" do
       instance = subject.new("abc", "def")
       expect(instance.authorize_params.keys).to eq(["state"])
       expect(instance.session["omniauth.state"]).not_to be_empty
+    end
+
+    it "includes custom state in the authorize params" do
+      instance = subject.new("abc", "def", state: Proc.new { "qux" } )
+      expect(instance.authorize_params.keys).to eq(["state"])
+      expect(instance.session["omniauth.state"]).to eq("qux")
     end
   end
 
@@ -70,7 +77,7 @@ describe OmniAuth::Strategies::OAuth2 do
     end
 
     it "includes top-level options that are marked as :authorize_options" do
-      instance = subject.new("abc", "def", :token_options => [:scope, :foo], :scope => "bar", :foo => "baz")
+      instance = subject.new("abc", "def", :token_options => %i[scope foo], :scope => "bar", :foo => "baz")
       expect(instance.token_params).to eq("scope" => "bar", "foo" => "baz")
     end
   end
